@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, RefreshCw, Ticket, DollarSign, User, Plus, LogOut } from 'lucide-react';
+import { FileText, RefreshCw, Ticket, DollarSign, User, Plus, LogOut, Menu } from 'lucide-react';
 import MyOrders from '../components/Dashboard/MyOrders';
 import Revisions from '../components/Dashboard/Revisions';
 import Tickets from '../components/Dashboard/Tickets';
 import Payments from '../components/Dashboard/Payments';
 import Settings from '../components/Dashboard/Settings';
 import { auth } from '../firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import CreateOrder from '../components/CreateOrder';
 
 const SidebarItem = ({ icon: Icon, label, isActive, onClick }) => (
@@ -28,6 +28,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('My Orders');
   const [showCreateOrder, setShowCreateOrder] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -41,6 +42,14 @@ const Dashboard = () => {
 
     return () => unsubscribe();
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
 
   const renderContent = () => {
     switch (activeTab) {
@@ -92,7 +101,7 @@ const Dashboard = () => {
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
-      <div className="w-64 bg-white shadow-lg">
+      <div className={`bg-white shadow-lg transition-all duration-300 ${isSidebarOpen ? 'w-64' : 'w-0'}`}>
         <div className="p-6">
           <h1 className="text-2xl font-bold text-gray-800">ProAcademic Writers</h1>
         </div>
@@ -108,7 +117,10 @@ const Dashboard = () => {
           ))}
         </nav>
         <div className="mt-auto p-4">
-          <button className="flex items-center w-full p-4 rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-500 transition-colors">
+          <button 
+            className="flex items-center w-full p-4 rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-500 transition-colors"
+            onClick={handleLogout}
+          >
             <LogOut className="h-5 w-5 mr-3" />
             <span className="font-medium">Logout</span>
           </button>
@@ -120,7 +132,15 @@ const Dashboard = () => {
         {/* Top navigation */}
         <header className="bg-white shadow-sm">
           <div className="flex justify-between items-center p-4">
-            <h2 className="text-2xl font-bold text-gray-800">{activeTab}</h2>
+            <div className="flex items-center">
+              <button 
+                className="mr-4 text-gray-600 hover:text-blue-500 focus:outline-none"
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              >
+                <Menu className="h-6 w-6" />
+              </button>
+              <h2 className="text-2xl font-bold text-gray-800">{activeTab}</h2>
+            </div>
             <div className="flex items-center space-x-4">
               <button 
                 className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
