@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FaGoogle } from 'react-icons/fa'; // Import Google icon from react-icons
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom'; // Updated import
 
 // Your Firebase configuration object (replace with your actual config)
@@ -20,6 +20,10 @@ const auth = getAuth(app);
 
 const SignUpLogin = () => {
   const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState(''); // For sign up
+  const [error, setError] = useState(''); // To capture errors
   const navigate = useNavigate(); // Use useNavigate instead of useHistory
 
   const handleGoogleSignIn = async () => {
@@ -34,9 +38,31 @@ const SignUpLogin = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(isLogin ? 'Logging in...' : 'Signing up...');
+    setError(''); // Clear previous errors
+
+    if (isLogin) {
+      // Handle login with email and password
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        console.log('Logged in:', userCredential.user);
+        navigate('/dashboard'); // Redirect to the dashboard after login
+      } catch (error) {
+        console.error('Error logging in:', error);
+        setError('Failed to log in. Please check your credentials.');
+      }
+    } else {
+      // Handle sign up with email and password
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        console.log('Signed up:', userCredential.user);
+        navigate('/dashboard'); // Redirect to the dashboard after sign up
+      } catch (error) {
+        console.error('Error signing up:', error);
+        setError('Failed to sign up. Please check your information.');
+      }
+    }
   };
 
   return (
@@ -68,6 +94,8 @@ const SignUpLogin = () => {
                   id="name"
                   name="name"
                   type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)} // Capture full name input
                   required
                   className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                   placeholder="Full Name"
@@ -83,6 +111,8 @@ const SignUpLogin = () => {
                 name="email"
                 type="email"
                 autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)} // Capture email input
                 required
                 className={`appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 ${
                   isLogin ? 'rounded-t-md' : ''
@@ -99,12 +129,16 @@ const SignUpLogin = () => {
                 name="password"
                 type="password"
                 autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)} // Capture password input
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                 placeholder="Password"
               />
             </div>
           </div>
+
+          {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
 
           <div>
             <button

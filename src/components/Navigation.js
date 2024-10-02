@@ -1,11 +1,25 @@
-// src/components/Navigation.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';  // Import useNavigate
+import { Link, useNavigate } from 'react-router-dom';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../firebase';  // Import Firebase auth
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const navigate = useNavigate();  // Set up navigation
+  const [isAuthenticated, setIsAuthenticated] = useState(false);  // State for checking login status
+  const navigate = useNavigate();
+
+  // Check authentication status on component mount
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   return (
     <nav className="bg-white shadow-md">
@@ -23,13 +37,24 @@ const Navigation = () => {
             </Link>
             <NavLink href="#contact">Contact</NavLink>
             <NavLink href="#faq">FAQ</NavLink>
-            <button
-              onClick={() => navigate('/login')}  // Redirect to login page
-              className="bg-blue-600 text-white px-4 py-2 rounded-full font-medium hover:bg-blue-700 transition duration-300"
-            >
-              Order Now
-            </button>
-            <NavButton>Dashboard</NavButton>
+
+            {isAuthenticated ? (
+              // Show dashboard button if user is logged in
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="bg-blue-600 text-white px-4 py-2 rounded-full font-medium hover:bg-blue-700 transition duration-300"
+              >
+                Dashboard
+              </button>
+            ) : (
+              // Show login button if user is not logged in
+              <button
+                onClick={() => navigate('/login')}
+                className="bg-blue-600 text-white px-4 py-2 rounded-full font-medium hover:bg-blue-700 transition duration-300"
+              >
+                Login
+              </button>
+            )}
           </div>
           <div className="md:hidden">
             <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-blue-800 hover:text-blue-600">
@@ -37,6 +62,7 @@ const Navigation = () => {
             </button>
           </div>
         </div>
+
         {isMenuOpen && (
           <div className="mt-4 md:hidden">
             <Link to="/services" className="block py-2 text-gray-700 hover:text-blue-600 font-medium transition duration-300">
@@ -47,13 +73,22 @@ const Navigation = () => {
             </Link>
             <NavLink href="#contact" mobile>Contact</NavLink>
             <NavLink href="#faq" mobile>FAQ</NavLink>
-            <button
-              onClick={() => navigate('/login')}  // Redirect to login page in mobile view
-              className="w-full mt-2 bg-blue-600 text-white px-4 py-2 rounded-full font-medium hover:bg-blue-700 transition duration-300"
-            >
-              Order Now
-            </button>
-            <NavButton mobile>Dashboard</NavButton>
+
+            {isAuthenticated ? (
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="w-full mt-2 bg-blue-600 text-white px-4 py-2 rounded-full font-medium hover:bg-blue-700 transition duration-300"
+              >
+                Dashboard
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate('/login')}
+                className="w-full mt-2 bg-blue-600 text-white px-4 py-2 rounded-full font-medium hover:bg-blue-700 transition duration-300"
+              >
+                Login
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -70,16 +105,4 @@ const NavLink = ({ href, children, mobile }) => (
   </a>
 );
 
-const NavButton = ({ children, primary, mobile }) => (
-  <button
-    className={`${
-      primary ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-    } ${mobile ? 'w-full mt-2' : ''} px-4 py-2 rounded-full font-medium transition duration-300`}
-  >
-    {children}
-  </button>
-);
-
 export default Navigation;
-
-
