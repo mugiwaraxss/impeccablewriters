@@ -12,6 +12,7 @@ const CreateOrder = ({ onClose, userId, onOrderCreated }) => {
     deadline: '',
     paperType: '',
     paperVolume: '',
+    paperMetric: 'Pages',
     spacing: '',
     sources: '',
     citationStyle: '',
@@ -21,9 +22,10 @@ const CreateOrder = ({ onClose, userId, onOrderCreated }) => {
   });
 
   const [confirmation, setConfirmation] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const updateOrder = (field, value) => {
-    setOrder({ ...order, [field]: value });
+    setOrder(prevOrder => ({ ...prevOrder, [field]: value }));
   };
 
   const getNextOrderNumber = async () => {
@@ -33,13 +35,9 @@ const CreateOrder = ({ onClose, userId, onOrderCreated }) => {
     if (counterSnap.exists()) {
       const currentNumber = counterSnap.data().lastOrderNumber;
       const nextOrderNumber = currentNumber + 1;
-
-      // Update the lastOrderNumber in Firestore
       await updateDoc(counterDocRef, { lastOrderNumber: nextOrderNumber });
-
       return nextOrderNumber;
     } else {
-      // If the document doesn't exist, create it and start from 1
       await setDoc(counterDocRef, { lastOrderNumber: 1 });
       return 1;
     }
@@ -47,16 +45,21 @@ const CreateOrder = ({ onClose, userId, onOrderCreated }) => {
 
   const submitOrder = async () => {
     if (!userId) {
-      setConfirmation('Error: No authenticated user found.');
+      setErrorMessage('Error: No authenticated user found.');
+      return;
+    }
+
+    if (!order.service || !order.academicLevel || !order.subject || !order.deadline || !order.paperType || !order.paperVolume || !order.title) {
+      setErrorMessage('Error: Please fill in all required fields.');
       return;
     }
 
     try {
-      const orderNumber = await getNextOrderNumber();  // Get the next sequential order number
+      const orderNumber = await getNextOrderNumber();
 
       const newOrder = {
         ...order,
-        orderNumber,  // Add the sequential order number to the new order
+        orderNumber,
         clientId: userId,
         status: 'In Progress',
         createdAt: serverTimestamp(),
@@ -65,13 +68,14 @@ const CreateOrder = ({ onClose, userId, onOrderCreated }) => {
       await addDoc(collection(db, 'orders'), newOrder);
 
       setConfirmation('Order successfully created!');
+      setErrorMessage('');
 
       if (onOrderCreated) onOrderCreated(newOrder);
 
       onClose();
     } catch (error) {
       console.error('Error submitting order:', error);
-      setConfirmation('Error: Order submission failed.');
+      setErrorMessage('Error: Order submission failed.');
     }
   };
 
@@ -100,7 +104,7 @@ const CreateOrder = ({ onClose, userId, onOrderCreated }) => {
             <h2 className="text-xl font-semibold">Academic Details</h2>
             <select
               className="w-full p-2 border rounded"
-              value={order.academicLevel || ''}  // Ensure controlled input
+              value={order.academicLevel}
               onChange={(e) => updateOrder('academicLevel', e.target.value)}
             >
               <option value="">Select Academic Level</option>
@@ -113,16 +117,19 @@ const CreateOrder = ({ onClose, userId, onOrderCreated }) => {
               type="text"
               placeholder="Subject"
               className="w-full p-2 border rounded"
-              value={order.subject || ''}  // Ensure controlled input
+              value={order.subject}
               onChange={(e) => updateOrder('subject', e.target.value)}
             />
-            <input
-              type="text"
-              placeholder="Deadline"
+            <select
               className="w-full p-2 border rounded"
-              value={order.deadline || ''}  // Ensure controlled input
+              value={order.deadline}
               onChange={(e) => updateOrder('deadline', e.target.value)}
-            />
+            >
+              <option value="">Select Deadline</option>
+              {['2H', '6H', '12H', '1DAY', '2DAYS', '3DAYS', '5DAYS', '6DAYS', '12DAYS', '30DAYS'].map((time) => (
+                <option key={time} value={time}>{time}</option>
+              ))}
+            </select>
           </div>
         );
       case 3:
@@ -131,7 +138,7 @@ const CreateOrder = ({ onClose, userId, onOrderCreated }) => {
             <h2 className="text-xl font-semibold">Paper Specifications</h2>
             <select
               className="w-full p-2 border rounded"
-              value={order.paperType || ''}  // Ensure controlled input
+              value={order.paperType}
               onChange={(e) => updateOrder('paperType', e.target.value)}
             >
               <option value="">Select Paper Type</option>
@@ -150,31 +157,30 @@ const CreateOrder = ({ onClose, userId, onOrderCreated }) => {
             <div className="flex space-x-2">
               <input
                 type="number"
-                placeholder="Pages"
+                placeholder={order.paperMetric === 'Pages' ? 'Pages' : 'Words'}
                 className="w-1/2 p-2 border rounded"
-                value={order.paperVolume || ''}  // Ensure controlled input
+                value={order.paperVolume}
                 onChange={(e) => updateOrder('paperVolume', e.target.value)}
               />
               <select
                 className="w-1/2 p-2 border rounded"
-                value={order.spacing || ''}  // Ensure controlled input
-                onChange={(e) => updateOrder('spacing', e.target.value)}
+                value={order.paperMetric}
+                onChange={(e) => updateOrder('paperMetric', e.target.value)}
               >
-                <option value="">Select Spacing</option>
-                <option value="Single">Single</option>
-                <option value="Double">Double</option>
+                <option value="Pages">Pages</option>
+                <option value="Words">Words</option>
               </select>
             </div>
             <input
               type="number"
               placeholder="Number of Sources"
               className="w-full p-2 border rounded"
-              value={order.sources || ''}  // Ensure controlled input
+              value={order.sources}
               onChange={(e) => updateOrder('sources', e.target.value)}
             />
             <select
               className="w-full p-2 border rounded"
-              value={order.citationStyle || ''}  // Ensure controlled input
+              value={order.citationStyle}
               onChange={(e) => updateOrder('citationStyle', e.target.value)}
             >
               <option value="">Select Citation Style</option>
@@ -193,13 +199,13 @@ const CreateOrder = ({ onClose, userId, onOrderCreated }) => {
               type="text"
               placeholder="Title"
               className="w-full p-2 border rounded"
-              value={order.title || ''}  // Ensure controlled input
+              value={order.title}
               onChange={(e) => updateOrder('title', e.target.value)}
             />
             <textarea
               placeholder="Additional Instructions"
               className="w-full p-2 border rounded h-32"
-              value={order.instructions || ''}  // Ensure controlled input
+              value={order.instructions}
               onChange={(e) => updateOrder('instructions', e.target.value)}
             />
             <input
@@ -224,11 +230,14 @@ const CreateOrder = ({ onClose, userId, onOrderCreated }) => {
           </button>
         </div>
         {confirmation && <p className="text-green-600 mb-4">{confirmation}</p>}
+        {errorMessage && <p className="text-red-600 mb-4">{errorMessage}</p>}
         <div className="flex mb-6">
           {['Service', 'General', 'Specifications', 'Details'].map((stepName, index) => (
             <div
               key={stepName}
-              className={`flex-1 text-center ${index + 1 === step ? 'text-blue-500 font-semibold' : index + 1 < step ? 'text-green-500' : 'text-gray-400'}`}
+              className={`flex-1 text-center ${
+                index + 1 === step ? 'text-blue-500 font-semibold' : index + 1 < step ? 'text-green-500' : 'text-gray-400'
+              }`}
             >
               {stepName}
             </div>
